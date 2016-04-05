@@ -211,27 +211,6 @@ class RowPartitionedMatrix(
     // parts.reduceLeftOption((a,b) => DenseMatrix.vertcat(a, b)).getOrElse(new DenseMatrix[Double](0, 0))
   }
 
-  def qrR(): DenseMatrix[Double] = {
-     new TSQR().qrR(this)
-  }
-
-  // Estimate the condition number of the matrix
-  // Optionally pass in a R that correspondings to the R matrix obtained
-  // by a QR decomposition
-  def condEst(rOpt: Option[DenseMatrix[Double]] = None): Double = {
-    val R = rOpt match {
-      case None => qrR()
-      case Some(rMat) => rMat
-    }
-    val n = R.rows
-    val work = new Array[Double](3*n)
-    val iwork = new Array[Int](n)
-    val rcond = new doubleW(0)
-    val info = new intW(0)
-    lapack.dtrcon("1", "U", "n", n, R.data, n, rcond, work, iwork, info)
-    1/(rcond.`val`)
-  }
-
   // Apply a function to each partition of the matrix
   def mapPartitions(f: DenseMatrix[Double] => DenseMatrix[Double]) = {
     // TODO: This can be efficient if we don't change num rows per partition

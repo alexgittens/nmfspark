@@ -14,7 +14,7 @@ import org.apache.spark.SparkConf
 import org.apache.spark.mllib.linalg.{DenseMatrix}
 import org.apache.spark.mllib.linalg.distributed.{IndexedRow}
 import edu.berkeley.cs.amplab.mlmatrix.{RowPartitionedMatrix, RowPartition, modifiedTSQR} 
-import breeze.linalg.{DenseMatrix => BDM, DenseVector => BDV, qr, svd}
+import breeze.linalg.{DenseMatrix => BDM, DenseVector => BDV, diag}
 
 import java.util.Calendar
 import java.text.SimpleDateFormat
@@ -56,16 +56,29 @@ object nmf {
         val rank = args(5).toInt
         val outdest = args(6)
 
-        Ral mat = loadH5Input(sc, inpath, variable, numrows, numcols, partitions)
+        val A = loadH5Input(sc, inpath, variable, numrows, numcols, partitions)
 
         // note this R is not reproducible between runs because it depends on the row partitioning
         // and the tree reduction order
-        val (colnorms, rmat) = new modifiedTSQR().qrR(mat)
+        val (colnorms, rmat) = new modifiedTSQR().qrR(A)
+        val normalizedrmat = rmat * diag( BDV.ones[Double](rmat.cols) :/ colnorms)
+        val extremalcols = xray(normalizedrmat, rank)
 
-        // one way to check rmat is correct is to right multiply by its inverse and check for orthogonality
+        // one way to check rmat is correct is to right multiply A by its inverse and check for orthogonality
         // check the colnorms by explicitly constructing them
+    }
 
-        val extremalcols = xray(normalizedrmat)
+    // greedy X-ray algorithm
+    def xray( X: BDM[Double], r : Int) : Array[Int] = {
+        val C = X.t*X
+        val projOntoBasis = BDV.zeros[Double](r)
+        val selColIndices = new Array[Int](r)
+
+        for( curiter <- 0 until r) {
+            val potentialCols = (0 until X.cols).filter( !(x => selColIndices contains x)(_) )
+        }
+
+        return selColIndices
     }
 
     // note numrows, numcols are currently ignored, and the dimensions are taken from the variable itself

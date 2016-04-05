@@ -8,16 +8,19 @@ OUTDIR="$DIR/data"
 JARNAME=$1
 RANK=10
 
-# double precision: this is a 9GB dataset
-INSOURCE=$SCRATCH/CFSROparquet
-NUMROWS=6349676
-NUMCOLS=192
+# double precision: this is a 3GB dataset
+INSOURCE=$DIR/testdata.h5
+VARIABLE=rows
+NUMROWS=2000000
+NUMCOLS=200
+RANK=20
+NUMPARTITIONS=10
 
 JOBNAME="nmf-$NUMROWS-$NUMCOLS-$RANK"
 OUTDEST="$OUTDIR/$JOBNAME.bin"
 LOGNAME="$JOBNAME.log"
 
-[-e $OUTDEST ] && (echo "Job already done successfully, stopping"; exit 1)
+[ -e $OUTDEST ] && (echo "Job already done successfully, stopping"; exit 1)
 
 # On Cori there are 32 cores/node and 128GB/node
 # so this test set can fit on one node w/ 3 cores per executor
@@ -25,6 +28,8 @@ NUMEXECUTORS=10
 NUMCORES=3
 DRIVERMEMORY=20G
 EXECUTORMEMORY=5G
+
+echo HERE NOW 
 
 spark-submit --verbose \
   --master $SPARKURL \
@@ -36,7 +41,7 @@ spark-submit --verbose \
   --conf spark.eventLog.dir=$LOGDIR \
   --conf spark.driver.maxResultSize=2G \
   --jars $JARNAME \
-  --class org.apace.spark.mllib.nmf \
+  --class org.apache.spark.mllib.nmf \
   $JARNAME \
   $INSOURCE $VARIABLE $NUMROWS $NUMCOLS $NUMPARTITIONS $RANK $OUTDEST \
-  2&>1 | tee $LOGNAME
+  2>&1 | tee $LOGNAME

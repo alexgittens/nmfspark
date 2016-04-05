@@ -14,7 +14,7 @@ import org.apache.spark.SparkContext
 import org.apache.spark.Accumulator
 import org.apache.spark.SparkContext._
 
-class modifiedTSQR extends RowPartitionedSolver with Logging with Serializable {
+class modifiedTSQR {
 
   /**
    * Returns only the R factor of a QR decomposition of the input matrix.
