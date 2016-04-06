@@ -16,10 +16,12 @@ import org.apache.spark.mllib.linalg.distributed.{IndexedRow}
 import edu.berkeley.cs.amplab.mlmatrix.{RowPartitionedMatrix, RowPartition, modifiedTSQR} 
 import breeze.linalg.{DenseMatrix => BDM, DenseVector => BDV, diag}
 
-import java.util.Calendar
-import java.text.SimpleDateFormat
+import org.apache.spark.mllib.optimization.NNLS
 
 import org.nersc.io._
+
+import java.util.Calendar
+import java.text.SimpleDateFormat
 
 object nmf {
 
@@ -52,51 +54,74 @@ object nmf {
         val variable = args(1)
         val numrows = args(2).toLong
         val numcols = args(3).toInt
-        val partitions = args(4).toInt
+        val partitions = args(4).toLong
         val rank = args(5).toInt
         val outdest = args(6)
 
+        val temprows = read.h5read_irow(sc, inpath, variable, partitions)
+        report(temprows.mapPartitions( x => Array(x.toList.length).toIterator).collect().mkString(" "))
         val A = loadH5Input(sc, inpath, variable, numrows, numcols, partitions)
+        A.rdd.cache() // store deserialized in memory 
+        A.rdd.count() // don't explicitly materialize, since we want to do pseudo one-pass, so let TSQR pay price of loading data
 
         // note this R is not reproducible between runs because it depends on the row partitioning
         // and the tree reduction order
         val (colnorms, rmat) = new modifiedTSQR().qrR(A)
         val normalizedrmat = rmat * diag( BDV.ones[Double](rmat.cols) :/ colnorms)
-        val extremalcols = xray(normalizedrmat, rank)
+        report("starting xray")
+        val extremalcolindices = xray.computeXray(normalizedrmat, rank)
+        report("ending xray")
 
+        report("Computing H from the small R matrix")
+        val H = computeH(rmat, extremalcolindices)
+        report("Done computing H")
+
+        // We make a pass back over the data to extract the columns we care about
+        // apparently RowPartitionedMatrix.collect is quite inefficient
+        val W = A.mapPartitions( mat => { 
+            val newMat = BDM.zeros[Double](mat.rows, extremalcolindices.length)
+            (0 until extremalcolindices.length).foreach { 
+                colidx => newMat(::, colidx) := mat(::, extremalcolindices(colidx)) }
+            newMat
+          }).collect()
+
+        // TODO: check correctness
         // one way to check rmat is correct is to right multiply A by its inverse and check for orthogonality
         // check the colnorms by explicitly constructing them
+
     }
 
-    // greedy X-ray algorithm
-    def xray( X: BDM[Double], r : Int) : Array[Int] = {
-        val C = X.t*X
-        val projOntoBasis = BDV.zeros[Double](r)
-        val selColIndices = new Array[Int](r)
+    // return argmin || R - R[::, colindices]*H ||_F s.t. H >= 0
+    def computeH(R : BDM[Double], colindices: Array[Int]) : BDM[Double] = {
+    /*
+        val RK = BDM.zeros[Double](R.rows, colindices.length)
+        (0 until colindices.length).foreach { colidx => RK(::, colidx) := R(::, colindices(colidx)) }
+        */
+        val RK = BDM.horzcat( (0 until colindices.length).toArray.map( colidx => R(::, colindices(colidx)).asDenseMatrix.t ):_* )
 
-        for( curiter <- 0 until r) {
-            val potentialCols = (0 until X.cols).filter( !(x => selColIndices contains x)(_) )
+        val H = BDM.zeros[Double](RK.cols, R.cols)
+        val ws = NNLS.createWorkspace(RK.cols)
+        val ata = (RK.t*RK).toArray
+
+        for(colidx <- 0 until R.cols) {
+            val atb = (RK.t*R(::, colidx)).toArray
+            val h = NNLS.solve(ata, atb, ws)
+            H(::, colidx) := BDV(h)
         }
-
-        return selColIndices
+        H
     }
 
     // note numrows, numcols are currently ignored, and the dimensions are taken from the variable itself
     def loadH5Input(sc: SparkContext, inpath: String, variable: String, numrows: Long, numcols: Int, repartition: Long) = {
-        val temprows = read.h5read_imat(sc, inpath, variable, repartition).rows
+        val temprows = read.h5read_irow(sc, inpath, variable, repartition)
 
         def buildRowBlock(iter: Iterator[IndexedRow]) : Iterator[RowPartition] = {
-            val numrows = iter.length
-            val firstrow = iter.next.vector.toBreeze.asInstanceOf[BDV[Double]]
-            val numcols = firstrow.length
-
-            val tempblock = BDM.zeros[Double](numrows, numcols)
-            tempblock(0, ::) := firstrow.t
-            for (rowidx <- 1 until iter.length) {
-                tempblock(rowidx, ::) := iter.next.vector.toBreeze.asInstanceOf[BDV[Double]].t
+            val mat = BDM.zeros[Double](iter.length, numcols)
+            for(rowidx <- 0 until iter.length) {
+                val currow = iter.next.vector.toBreeze.asInstanceOf[BDV[Double]].t
+                mat(rowidx, ::) := currow
             }
-
-            Array(RowPartition(tempblock)).toIterator
+            Array(RowPartition(mat)).toIterator
         }
 
         new RowPartitionedMatrix(temprows.mapPartitions(buildRowBlock))

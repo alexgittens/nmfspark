@@ -10,7 +10,7 @@ RANK=10
 
 # double precision: this is a 3GB dataset
 INSOURCE=$DIR/testdata.h5
-VARIABLE=rows
+VARIABLE=mat
 NUMROWS=2000000
 NUMCOLS=200
 RANK=20
@@ -28,8 +28,6 @@ NUMEXECUTORS=10
 NUMCORES=3
 DRIVERMEMORY=20G
 EXECUTORMEMORY=5G
-
-echo HERE NOW 
 
 spark-submit --verbose \
   --master $SPARKURL \

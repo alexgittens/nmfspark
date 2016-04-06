@@ -4,3 +4,5 @@ project/*
 testdata.h5
 eventLogs/
 data/
+*.log
+*.out

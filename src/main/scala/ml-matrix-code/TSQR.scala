@@ -14,7 +14,18 @@ import org.apache.spark.SparkContext
 import org.apache.spark.Accumulator
 import org.apache.spark.SparkContext._
 
-class modifiedTSQR {
+import java.util.Calendar
+import java.text.SimpleDateFormat
+
+class modifiedTSQR extends Serializable {
+
+    def report(message: String, verbose: Boolean = true) = {
+        val now = Calendar.getInstance().getTime()
+        val formatter = new SimpleDateFormat("H:m:s")
+        if (verbose) {
+            println("STATUS REPORT (" + formatter.format(now) + "): " + message)
+        }
+    }
 
   /**
    * Returns only the R factor of a QR decomposition of the input matrix.
@@ -32,8 +43,10 @@ class modifiedTSQR {
       if (part.mat.rows < part.mat.cols) {
         (coll1norms(part.mat), part.mat)
       } else {
+        report("begin local QR computation")
         val begin = System.nanoTime
         val r = QRUtils.qrR(part.mat)
+        report("finish local QR computation")
         localQR += ((System.nanoTime - begin) / 1000000)
         (coll1norms(part.mat), r)
       }
