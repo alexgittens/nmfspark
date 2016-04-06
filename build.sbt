@@ -18,17 +18,17 @@ submit <<= (assembly in Compile) map {
   (jarFile: File) => s"src/computeNMF.sh ${jarFile}" !
 } 
 
-lazy val nodes51 = taskKey[Unit]("compute NMF on large dataset w/ 51 nodes")
+lazy val nodes51 = taskKey[Unit]("compute NMF on large dataset w/ 50 executors")
 nodes51 <<= (assembly in Compile) map {
-    (jarFile: File) => s"src/computeNMF.sh ${jarFile} 51" !
+    (jarFile: File) => s"src/computeNMF.sh ${jarFile} 50" !
 }
 
-lazy val nodes101 = taskKey[Unit]("compute NMF on large dataset w/ 101 nodes")
+lazy val nodes101 = taskKey[Unit]("compute NMF on large dataset w/ 100 executors")
 nodes101 <<= (assembly in Compile) map {
-    (jarFile: File) => s"src/computeNMF.sh ${jarFile} 101" !
+    (jarFile: File) => s"src/computeNMF.sh ${jarFile} 100" !
 }
 
-lazy val nodes301 = taskKey[Unit]("compute NMF on large dataset w/ 301 nodes")
+lazy val nodes301 = taskKey[Unit]("compute NMF on large dataset w/ 300 executors")
 nodes301 <<= (assembly in Compile) map {
-    (jarFile: File) => s"src/computeNMF.sh ${jarFile} 301" !
+    (jarFile: File) => s"src/computeNMF.sh ${jarFile} 300" !
 }
