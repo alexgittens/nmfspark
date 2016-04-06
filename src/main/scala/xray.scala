@@ -14,7 +14,7 @@ object xray {
   }
 */
 
-  def computeXray( X : BDM[Double], r : Int) : Array[Int] = {
+  def computeXray( X : BDM[Double], r : Int) : (Array[Int], BDM[Double]) = {
 
     val C = X.t*X
     val projOntoBasis = BDV.zeros[Double](r) // holds X^T_A * X_j
@@ -58,7 +58,7 @@ object xray {
       curH = computeH(selColIndices, curXA)
     }
 
-    return selColIndices
+    return (selColIndices, curH)
   }
 
 }

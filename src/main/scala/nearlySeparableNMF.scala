@@ -72,14 +72,16 @@ object nmf {
         report("TSQR worked")
         val normalizedrmat = rmat * diag( BDV.ones[Double](rmat.cols) :/ colnorms)
         report("starting xray")
-        val extremalcolindices = xray.computeXray(normalizedrmat, rank)
+        val (extremalcolindices, finalH) = xray.computeXray(normalizedrmat, rank)
         report("ending xray")
 
+/* Actually, the final H computed in xray is exactly this H
         report("Computing H from the small R matrix")
         val H = computeH(rmat, extremalcolindices)
         report("Done computing H")
+        */
 
-/* THIS IS TOO LARGE (87GB, and too many indices) to collect for 1.6TB dayabay dataset 
+        /* THIS IS TOO LARGE (87GB, and too many indices) to collect for 1.6TB dayabay dataset 
         // We make a pass back over the data to extract the columns we care about
         // apparently RowPartitionedMatrix.collect is quite inefficient
         val W = A.mapPartitions( mat => { 
@@ -117,7 +119,7 @@ object nmf {
     }
 
     // note numrows, numcols are currently ignored, and the dimensions are taken from the variable itself
-    def loadH5Input(sc: SparkContext, inpath: String, variable: String, numrows: Long, numcols: Int, repartition: Long) = {
+    def loadH5Input(sc: SparkContext, inpath: String, variable: String, numrows: Long, numcols: Int, repartition: Long) : RowPartitionedMatrix = {
         val temprows = read.h5read_irow(sc, inpath, variable, repartition)
 
         def buildRowBlock(iter: Iterator[IndexedRow]) : Iterator[RowPartition] = {
