@@ -70,19 +70,15 @@ object nmf {
         report("calling TSQR")
         val (colnorms, rmat) = new modifiedTSQR().qrR(A)
         report("TSQR worked")
+        report("normalizing the columns of R")
         val normalizedrmat = rmat * diag( BDV.ones[Double](rmat.cols) :/ colnorms)
+        report("done normalizing")
         report("starting xray")
         val (extremalcolindices, finalH) = xray.computeXray(normalizedrmat, rank)
         report("ending xray")
 
-/* Actually, the final H computed in xray is exactly this H
-        report("Computing H from the small R matrix")
-        val H = computeH(rmat, extremalcolindices)
-        report("Done computing H")
-        */
-
         /* THIS IS TOO LARGE (87GB, and too many indices) to collect for 1.6TB dayabay dataset 
-        // We make a pass back over the data to extract the columns we care about
+        // Make a pass back over the data to extract the columns we care about
         // apparently RowPartitionedMatrix.collect is quite inefficient
         val W = A.mapPartitions( mat => { 
             val newMat = BDM.zeros[Double](mat.rows, extremalcolindices.length)
@@ -96,14 +92,12 @@ object nmf {
         // one way to check rmat is correct is to right multiply A by its inverse and check for orthogonality
         // check the colnorms by explicitly constructing them
 
+        // TODO: return/write out decomposition
+
     }
 
-    // return argmin || R - R[::, colindices]*H ||_F s.t. H >= 0
+    /* returns argmin || R - R[::, colindices]*H ||_F s.t. H >= 0 */
     def computeH(R : BDM[Double], colindices: Array[Int]) : BDM[Double] = {
-    /*
-        val RK = BDM.zeros[Double](R.rows, colindices.length)
-        (0 until colindices.length).foreach { colidx => RK(::, colidx) := R(::, colindices(colidx)) }
-        */
         val RK = BDM.horzcat( (0 until colindices.length).toArray.map( colidx => R(::, colindices(colidx)).asDenseMatrix.t ):_* )
 
         val H = BDM.zeros[Double](RK.cols, R.cols)
@@ -115,6 +109,7 @@ object nmf {
             val h = NNLS.solve(ata, atb, ws)
             H(::, colidx) := BDV(h)
         }
+
         H
     }
 
