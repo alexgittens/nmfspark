@@ -9,14 +9,21 @@ JARNAME=$1
 NUMNODES=$2
 
 # double precision: this is a 3GB dataset
-INSOURCE=/global/cscratch1/sd/jialin/dayabay/2016/data/one.h5
+#INSOURCE=/global/cscratch1/sd/jialin/dayabay/2016/data/one.h5
+INSOURCE=/global/cscratch1/sd/aditya08/nmf_single_dset_stripe72/one.h5
 VARIABLE=charge
 NUMROWS=1099413914
 NUMCOLS=192
 RANK=10
-NUMPARTITIONS=$((NUMNODES*64))
+if [ "$NUMNODES" -lt "100" ]
+then
+  NUMPARTITIONS=$((NUMNODES*64))
+else
+  NUMPARTITIONS=$((NUMNODES*32))
+fi
 
-JOBNAME="nmf-$VARIABLE-$NUMROWS-$NUMCOLS-$RANK"
+
+JOBNAME="nmf-$VARIABLE-$NUMROWS-$NUMCOLS-$NUMPARTITIONS-$RANK"
 OUTDEST="$OUTDIR/$JOBNAME.bin"
 LOGNAME="$JOBNAME.log"
 
@@ -27,10 +34,10 @@ LOGNAME="$JOBNAME.log"
 
 # On Cori there are 32 cores/node and 128GB/node
 # so this test set can fit on one node w/ 3 cores per executor
-NUMEXECUTORS=10
-NUMCORES=3
+NUMEXECUTORS=$NUMNODES
+NUMCORES=32
 DRIVERMEMORY=120G
-EXECUTORMEMORY=10G
+EXECUTORMEMORY=100G
 
 spark-submit --verbose \
   --master $SPARKURL \

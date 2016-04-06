@@ -4,6 +4,8 @@
 #SBATCH -p regular
 #SBATCH -t 5
 #SBATCH --ccm
+#SBATCH --reservation=INC0082872
+#SBATCH -A m1523
 
 module load spark/1.5.1 sbt
 export SPARK_LOCAL_DIRS="/tmp,/dev/shm"

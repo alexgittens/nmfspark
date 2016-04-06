@@ -17,11 +17,13 @@ import edu.berkeley.cs.amplab.mlmatrix.{RowPartitionedMatrix, RowPartition, modi
 import breeze.linalg.{DenseMatrix => BDM, DenseVector => BDV, diag}
 
 import org.apache.spark.mllib.optimization.NNLS
+import scala.math
 
 import org.nersc.io._
 
 import java.util.Calendar
 import java.text.SimpleDateFormat
+
 
 object nmf {
 
@@ -121,8 +123,8 @@ object nmf {
         def buildRowBlock(iter: Iterator[IndexedRow]) : Iterator[RowPartition] = {
             val mat = BDM.zeros[Double](iter.length, numcols)
             for(rowidx <- 0 until iter.length) {
-                val currow = iter.next.vector.toBreeze.asInstanceOf[BDV[Double]].t
-                mat(rowidx, ::) := currow
+                val currow = iter.next.vector.toBreeze.asInstanceOf[BDV[Double]]
+                mat(rowidx, ::) := currow.map(x => if (x < 0) 0 else math.log(x + 1)).t
             }
             Array(RowPartition(mat)).toIterator
         }
