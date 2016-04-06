@@ -59,14 +59,15 @@ object nmf {
         val outdest = args(6)
 
         val temprows = read.h5read_irow(sc, inpath, variable, partitions)
-        report(temprows.mapPartitions( x => Array(x.toList.length).toIterator).collect().mkString(" "))
         val A = loadH5Input(sc, inpath, variable, numrows, numcols, partitions)
         A.rdd.cache() // store deserialized in memory 
         A.rdd.count() // don't explicitly materialize, since we want to do pseudo one-pass, so let TSQR pay price of loading data
 
         // note this R is not reproducible between runs because it depends on the row partitioning
         // and the tree reduction order
+        report("calling TSQR")
         val (colnorms, rmat) = new modifiedTSQR().qrR(A)
+        report("TSQR worked")
         val normalizedrmat = rmat * diag( BDV.ones[Double](rmat.cols) :/ colnorms)
         report("starting xray")
         val extremalcolindices = xray.computeXray(normalizedrmat, rank)
@@ -76,6 +77,7 @@ object nmf {
         val H = computeH(rmat, extremalcolindices)
         report("Done computing H")
 
+/* THIS IS TOO LARGE (87GB, and too many indices) to collect for 1.6TB dayabay dataset 
         // We make a pass back over the data to extract the columns we care about
         // apparently RowPartitionedMatrix.collect is quite inefficient
         val W = A.mapPartitions( mat => { 
@@ -84,6 +86,7 @@ object nmf {
                 colidx => newMat(::, colidx) := mat(::, extremalcolindices(colidx)) }
             newMat
           }).collect()
+          */
 
         // TODO: check correctness
         // one way to check rmat is correct is to right multiply A by its inverse and check for orthogonality

@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 #SBATCH -N 101
-#SBATCH -p debug
+#SBATCH -p regular
 #SBATCH -t 5
 #SBATCH --ccm
 
