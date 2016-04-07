@@ -4,7 +4,6 @@ algorithm of
 tall-and-skinny matrices. Benson et al.''
 
 */
-
 package org.apache.spark.mllib
 
 import org.apache.spark.SparkContext
@@ -62,8 +61,9 @@ object nmf {
 
         val temprows = read.h5read_irow(sc, inpath, variable, partitions)
         val A = loadH5Input(sc, inpath, variable, numrows, numcols, partitions)
-        A.rdd.cache() // store deserialized in memory 
-        A.rdd.count() // don't explicitly materialize, since we want to do pseudo one-pass, so let TSQR pay price of loading data
+        /* don't cache or count, since we don't need to return the true columns from the matrix */
+//        A.rdd.cache() // store deserialized in memory 
+//        A.rdd.count() // don't explicitly materialize, since we want to do pseudo one-pass, so let TSQR pay price of loading data
 
         // note this R is not reproducible between runs because it depends on the row partitioning
         // and the tree reduction order

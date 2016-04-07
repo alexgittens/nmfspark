@@ -6,3 +6,4 @@ eventLogs/
 data/
 *.log
 *.out
+historical_runs/

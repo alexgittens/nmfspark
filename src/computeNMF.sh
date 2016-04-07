@@ -33,11 +33,10 @@ LOGNAME="$JOBNAME.log"
 # core count is higher
 
 # On Cori there are 32 cores/node and 128GB/node
-# so this test set can fit on one node w/ 3 cores per executor
 NUMEXECUTORS=$NUMNODES
 NUMCORES=32
 DRIVERMEMORY=120G
-EXECUTORMEMORY=100G
+EXECUTORMEMORY=120G
 
 spark-submit --verbose \
   --master $SPARKURL \
