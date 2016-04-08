@@ -59,7 +59,6 @@ object nmf {
         val rank = args(5).toInt
         val outdest = args(6)
 
-        val temprows = read.h5read_irow(sc, inpath, variable, partitions)
         val A = loadH5Input(sc, inpath, variable, numrows, numcols, partitions)
         /* don't cache or count, since we don't need to return the true columns from the matrix */
 //        A.rdd.cache() // store deserialized in memory 
