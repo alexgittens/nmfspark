@@ -29,3 +29,6 @@ lazy val nodes301 = taskKey[Unit]("compute NMF on large dataset w/ 300 executors
 nodes301 <<= (assembly in Compile) map {
     (jarFile: File) => s"src/computeNMF.sh ${jarFile} 300" !
 }
+
+parallelExecution in Test := false
+test in assembly := {}

@@ -50,6 +50,19 @@ object nmf {
         appMain(sc, args)
     }
 
+    def fullNMF(A : RowPartitionedMatrix, rank : Int) : Tuple3[Array[Int], BDM[Double], BDM[Double]] = {
+        val (colnorms, rmat) = new modifiedTSQR().qrR(A)
+        val normalizedrmat = rmat * diag( BDV.ones[Double](rmat.cols) :/ colnorms)
+        val (extremalcolindices, finalH) = xray.computeXray(normalizedrmat, rank)
+        val W = A.mapPartitions( mat => { 
+            val newMat = BDM.zeros[Double](mat.rows, extremalcolindices.length)
+            (0 until extremalcolindices.length).foreach { 
+                colidx => newMat(::, colidx) := mat(::, extremalcolindices(colidx)) }
+            newMat
+          }).collect()
+	(extremalcolindices, W, finalH * diag( BDV.ones[Double](rmat.cols) :* colnorms))
+    }
+
     def appMain(sc: SparkContext, args: Array[String]) = {
         val inpath = args(0)
         val variable = args(1)
